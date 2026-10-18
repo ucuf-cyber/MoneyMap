@@ -1,0 +1,122 @@
+// MoneyMap - finance tracker & wedding budget planner
+// PostgreSQL datasource (hosted, e.g. Vercel Postgres / Neon)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String   @default("Kamu")
+  email        String?
+  currency     String   @default("IDR")
+  theme        String   @default("dark")
+  passwordHash String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Category {
+  id           String        @id @default(cuid())
+  name         String
+  icon         String        @default("Wallet")
+  color        String        @default("#FF6B35")
+  type         String        @default("expense") // "expense" | "income"
+  isDefault    Boolean       @default(false)
+  createdAt    DateTime      @default(now())
+  transactions Transaction[]
+
+  @@unique([name, type])
+}
+
+model Transaction {
+  id         String   @id @default(cuid())
+  type       String // "income" | "expense"
+  amount     Float
+  date       DateTime
+  note       String?
+  method     String   @default("cash") // cash | ewallet | transfer | card
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([date])
+  @@index([categoryId])
+}
+
+model SavingsGoal {
+  id            String    @id @default(cuid())
+  name          String
+  icon          String    @default("PiggyBank")
+  color         String    @default("#FFC93C")
+  targetAmount  Float
+  currentAmount Float     @default(0)
+  autoSplitPct  Float     @default(0) // % of each income auto-allocated
+  targetDate    DateTime?
+  isWeddingGoal Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  contributions SavingsContribution[]
+}
+
+model SavingsContribution {
+  id            String      @id @default(cuid())
+  goalId        String
+  goal          SavingsGoal @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  amount        Float
+  date          DateTime    @default(now())
+  note          String?
+  createdAt     DateTime    @default(now())
+
+  @@index([goalId])
+}
+
+model WeddingVendor {
+  id        String              @id @default(cuid())
+  name      String
+  contact   String?
+  notes     String?
+  createdAt DateTime            @default(now())
+  items     WeddingBudgetItem[]
+}
+
+model WeddingBudgetItem {
+  id            String         @id @default(cuid())
+  category      String // e.g. Venue, Katering, Dekorasi, ...
+  estimatedCost Float          @default(0)
+  actualCost    Float          @default(0)
+  paidAmount    Float          @default(0)
+  dueDate       DateTime?
+  notes         String?
+  vendorId      String?
+  vendor        WeddingVendor? @relation(fields: [vendorId], references: [id], onDelete: SetNull)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model Reminder {
+  id        String    @id @default(cuid())
+  title     String
+  amount    Float?
+  dueDate   DateTime?
+  isDone    Boolean   @default(false)
+  createdAt DateTime  @default(now())
+}
+
+model WeddingGiftItem {
+  id          String   @id @default(cuid())
+  name        String
+  price       Float    @default(0)
+  storeLink   String?
+  notes       String?
+  isPurchased Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
